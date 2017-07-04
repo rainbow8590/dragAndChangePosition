@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <style>
+*{
+    margin: 0;
+    padding: 0;
+}
+.box{
+    width: 600px;
+    height: 120px;
+    padding: 20px;
+    margin: 40px auto 0;
+    border: 1px solid #ccc;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.box dl{
+    width: 300px;
+    float: left;
+}
+.box dl dt{
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 10px;
+}
+.box dl dd{
+    font-size: 12px;
+}
+.box dl dd span{
+    display: block;
+    float: left;
+    width: 70px;
+    height: 26px;
+    border: 1px dashed #ccc;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.box dl dd span ins{
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    width: 70px;
+    height: 26px;
+    line-height: 26px;
+    border: 1px dashed #e5e5e5;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#right ins{
+    border: 1px solid #e5e5e5;
+}
+
+#right span:hover ins{
+    background: #f60;
+    color: #fff;
+    border-color: #f60;
+}
+
+#right span ins.curRight{
+    background: #f60;
+    color: #fff;
+    border-color: #f60;
+}
+
+#left span:hover ins{
+  border: 1px dashed #f60;
+}
+#left span ins.curLeft{
+  border: 1px dashed #f60;
+}
+h3{
+    text-align: center;
+    margin-top: 100px;
+    color: #666;
+    font-weight: normal;
+}
+    </style>
+</head>
+<body>
+    <h3>拖拽添加或删除项目</h3>
+    <div class="box">
+        <dl id="left">
+            <dt>已关注</dt>
+            <dd>
+                <span><ins>项目一</ins></span>
+                <span><ins>项目二</ins></span>
+            </dd>
+        </dl>
+        <dl id="right">
+            <dt>未关注</dt>
+            <dd>
+                <span><ins>项目三</ins></span>
+                <span><ins>项目四</ins></span>
+                <span><ins>项目五</ins></span>
+            </dd>
+        </dl>
+
+    </div>
+
+    <script src="jquery-1.11.1.js"></script>
+
+    <script>
+
+
+    dragItem('.box','#left','#right');
+
+    function dragItem(box,leftId,rightId){
+        var stX = stY = edX = edY = X = Y = 0;
+        var target = null;  //事件源
+        var num = 1;//判断是否有移动的距离
+        var clon = null;
+
+        var offsetL = $(box).offset().left + $(box).outerWidth()/2
+        //左侧移动到右侧
+        //鼠标按下移动每一项
+        $('ins').on('mousedown',function(e){
+            num = 1;
+            e.stopPropagation();
+            //鼠标起始位置
+            stX = e.clientX;
+            stY = e.clientY;
+            //获取鼠标按下时对应的ins
+            target = e.target;
+            //改变鼠标形状
+            $(this).css('cursor','move');
+            $(this).parent().css('border-color','#f60')
+            clon = $(this).parent().clone().empty()
+
+            //添加newSpan
+            //如果起始位置在左侧，那么在右侧添加
+            if(stX < offsetL){
+                //添加左侧的选中样式
+                $(this).addClass('curLeft');
+                //newSpan添加到右侧
+                $(clon).appendTo($(rightId).find('dd'));
+            }else{//如果起始位置在右侧，那么在左侧添加
+                //添加右侧的选中样式
+                $(this).addClass('curRight');
+                //newSpan添加到左侧
+                $(clon).appendTo($(leftId).find('dd'));
+            }
+
+            //鼠标移动事件
+            $(document).on('mousemove',function(e){
+                
+                //鼠标移动的结束位置
+                edX = e.clientX;
+                edY = e.clientY;
+                num = 2;
+                $(clon).css('border-color','#f60')
+                //判断边界
+                flag();
+            })
+        });
+        //鼠标松开事件
+        $(document).on('mouseup',function(e){
+            //取消移动事件
+            $(document).off('mousemove')
+            if(num == 2){
+                //根据起始位置和结束位置判断目标源的位置
+                //起始位置在左侧
+                if(stX < offsetL ){
+                    //如果结束位置在左侧
+                    if(edX <offsetL ){
+                        $(rightId).find('dd span').last().remove();
+                        $(target).stop().animate({left: -1,top: -1},500)
+                        $(target).removeClass('curLeft');
+                     }else{//如果结束位置在右侧
+                        //设置目标源的css位置，
+                        $(target).css({left: -($(rightId).find('dd span').last().offset().left-$(target).parent().offset().left - (edX - stX)),top: Y + $(target).parent().offset().top -$(rightId).find('dd span').last().offset().top });
+                        $(rightId).find('dd span').last().remove();
+                        $(target).parent().appendTo($(rightId).find('dd'))
+                        $(target).stop().animate({left: -1,top: -1},500);
+                        $(target).removeClass('curLeft');
+                     }
+                  //起始位置在右侧
+                }else{
+                    //如果结束位置在左侧
+                    if(edX < offsetL){
+                        //设置目标源的css位置
+                        $(target).css({left: $(target).parent().offset().left -$(leftId).find('dd span').last().offset().left + (edX - stX),top: Y + $(target).parent().offset().top -$(leftId).find('dd span').last().offset().top });
+                        $(leftId).find('dd span').last().remove();
+                        $(target).parent().appendTo($(leftId).find('dd'));
+                        $(target).stop().animate({left: -1,top: -1},500);
+                        $(target).removeClass('curRight');
+                     }else{//如果结束位置在右侧
+                        $(leftId).find('dd span').last().remove();
+                        $(target).stop().animate({left: -1,top: -1},500)
+                        $(target).removeClass('curRight');
+                     }
+                }
+                num =1;
+                stX = stY = edX = edY = X = Y = 0;
+                $(target).css('cursor','pointer');
+            }else{
+                if(e.target == target){
+                    //如果用户只点击未移动 这时num=1；
+                    //如果点击的起始位置在左侧，那么移除右侧
+                    if(stX < $(box).offset().left + $(box).width()/2){
+                        //移除右侧最后一个
+                        $(rightId).find('dd span').last().remove();
+                        $(target).removeClass('curLeft')
+                    }else{//如果起始位置在右侧
+                        $(leftId).find('dd span').last().remove();
+                        $(target).removeClass('curRight');
+                    }
+                }
+       
+                return false;
+            }
+        })
+
+
+        //判断边界 
+        function flag(){
+
+            $(clon).css('border-color','#f60');
+
+            flagRange();
+
+            changeColor();
+
+            //移动项的相对位置
+            X = edX - $(target).parent().offset().left- $(target).width()/2;
+            Y = edY - $(target).parent().offset().top- $(target).height()/2;
+            // X = edX - $(target).parent().offset().left;
+            // Y = edY - $(target).parent().offset().top;
+
+            //移动项的位置  
+            $(target).css({
+                left: X,
+                top: Y
+            })
+
+        }
+
+        //判断边界
+        function flagRange(){
+            //X方向边界
+            if(edX < $(box).offset().left+$(target).width()/2 ){
+                edX = $(box).offset().left+$(target).width()/2;
+            }else if(edX > $(box).offset().left + $(box).outerWidth()-$(target).width()/2){
+                edX = $(box).offset().left + $(box).outerWidth()-$(target).width()/2 - 4
+            }
+
+            //Y方向边界
+            if(edY < $(box).offset().top+$(target).height()/2){
+                edY = $(box).offset().top+$(target).height()/2;
+            }else if(edY > $(box).offset().top + $(box).outerHeight()-$(target).height()/2){
+                edY = $(box).offset().top + $(box).outerHeight()-$(target).height()/2 - 4
+            }
+        }
+
+        //改变虚线框的颜色
+        function changeColor(){
+            //判断虚线框的颜色
+            if(stX < offsetL){
+                //如果结束位置在右侧
+                if(edX > offsetL){
+                    $(rightId).find('dd span').last().css('border-color','#f60')
+                }else{//如果结束位置在左侧
+                    $(rightId).find('dd span').last().css('border-color','#ccc')
+                }
+            }else{  //如果开始位置在右侧,结束位置在左侧
+                //如果结束位置在左侧
+                if(edX < offsetL){
+                    $(leftId).find('dd span').last().css('border-color','#f60')
+                }else{
+                    $(leftId).find('dd span').last().css('border-color','#ccc')
+                }
+            }
+        }
+
+
+    }
+
+  
+    </script>
+</body>
+</html>
